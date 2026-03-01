@@ -1,7 +1,85 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
-class SystemScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:system_info2/system_info2.dart';
+
+class SystemScreen extends StatefulWidget {
   const SystemScreen({super.key});
+
+  @override
+  State<SystemScreen> createState() => _SystemScreenState();
+}
+
+class _SystemScreenState extends State<SystemScreen> {
+  String _osName = 'Loading...';
+  String _osVersion = '';
+  String _apiLevel = '';
+  String _buildId = '';
+  String _kernelVersion = '';
+  String _securityPatch = '';
+  String _totalRAM = '';
+  String _usedRAM = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSystemInfo();
+  }
+
+  Future<void> _fetchSystemInfo() async {
+    final deviceInfoPlugin = DeviceInfoPlugin();
+
+    String osName = 'Unknown';
+    String osVersion = '';
+    String apiLevel = '';
+    String buildId = 'Unknown';
+    String kernelVersion = SysInfo.kernelVersion;
+    String securityPatch = 'Unknown';
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfoPlugin.androidInfo;
+        osName = 'Android ${androidInfo.version.release}';
+        apiLevel = 'API Level ${androidInfo.version.sdkInt}';
+        buildId = androidInfo.id;
+        securityPatch = androidInfo.version.securityPatch ?? 'Unknown';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfoPlugin.iosInfo;
+        osName = '${iosInfo.systemName} ${iosInfo.systemVersion}';
+        buildId = 'Unknown'; // no exact match for iOS
+        securityPatch = 'Unknown';
+      }
+    } catch (e) {
+      print("Error fetching system info: $e");
+    }
+
+    int totalRAMBytes = 0;
+    int freeRAMBytes = 0;
+    try {
+      totalRAMBytes = SysInfo.getTotalPhysicalMemory();
+      freeRAMBytes = SysInfo.getFreePhysicalMemory();
+    } catch (e) {
+      print("Error fetching RAM info: $e");
+    }
+
+    double totalGB = totalRAMBytes / (1024 * 1024 * 1024);
+    double freeGB = freeRAMBytes / (1024 * 1024 * 1024);
+    double usedGB = totalGB - freeGB;
+
+    if (mounted) {
+      setState(() {
+        _osName = osName;
+        _osVersion = osVersion;
+        _apiLevel = apiLevel;
+        _buildId = buildId;
+        _kernelVersion = kernelVersion;
+        _securityPatch = securityPatch;
+        _totalRAM = '${totalGB.toStringAsFixed(1)} GB';
+        _usedRAM = '${usedGB.toStringAsFixed(1)} GB';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,34 +138,25 @@ class SystemScreen extends StatelessWidget {
             ],
             border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 4),
           ),
-          child: const Center(
-            child: Icon(Icons.android, size: 64, color: Colors.green),
+          child: Center(
+            child: Icon(Platform.isAndroid ? Icons.android : Icons.apple, size: 64, color: Platform.isAndroid ? Colors.green : Colors.grey),
           ),
         ),
         const SizedBox(height: 16),
-        Text('Android 13', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(_osName, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+            if (_apiLevel.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(_apiLevel, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12)),
               ),
-              child: Text('Tiramisu', style: TextStyle(color: primaryColor, fontSize: 12, fontWeight: FontWeight.w500)),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text('API Level 33', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12)),
-            ),
           ],
         ),
       ],
@@ -111,7 +180,7 @@ class SystemScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('RAM USAGE', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10, letterSpacing: 1)),
                 const SizedBox(height: 4),
-                Text('3.4 / 8 GB', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('$_usedRAM / $_totalRAM', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -131,7 +200,7 @@ class SystemScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('UPTIME', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10, letterSpacing: 1)),
                 const SizedBox(height: 4),
-                Text('42h 15m', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('N/A', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -149,11 +218,9 @@ class SystemScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildInfoItem(context, 'Build ID', 'TP1A.220905.004', trailingIcon: Icons.content_copy),
-          _buildInfoItem(context, 'Kernel Version', '5.10.107-android12-9-g309...', isMono: true),
-          _buildInfoItem(context, 'Security Patch', 'October 5, 2023', icon: Icons.verified_user, iconColor: Colors.green),
-          _buildInfoItem(context, 'Java VM', 'ART 2.1.0'),
-          _buildInfoItem(context, 'Google Play Services', '23.32.16 (190400-560...)', isLast: true),
+          _buildInfoItem(context, 'Build ID', _buildId, trailingIcon: Icons.content_copy),
+          _buildInfoItem(context, 'Kernel Version', _kernelVersion, isMono: true),
+          _buildInfoItem(context, 'Security Patch', _securityPatch, icon: Icons.verified_user, iconColor: Colors.green),
         ],
       ),
     );
@@ -181,10 +248,12 @@ class SystemScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                fontFamily: isMono ? 'monospace' : null,
-              )),
+              Expanded(
+                child: Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  fontFamily: isMono ? 'monospace' : null,
+                )),
+              ),
               if (trailingIcon != null)
                 Icon(trailingIcon, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
             ],

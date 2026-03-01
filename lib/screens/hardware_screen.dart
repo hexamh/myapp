@@ -1,7 +1,58 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
-class HardwareScreen extends StatelessWidget {
+class HardwareScreen extends StatefulWidget {
   const HardwareScreen({super.key});
+
+  @override
+  State<HardwareScreen> createState() => _HardwareScreenState();
+}
+
+class _HardwareScreenState extends State<HardwareScreen> {
+  String _model = 'Loading...';
+  String _osVersion = '';
+  String _architecture = '';
+  String _cores = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHardwareInfo();
+  }
+
+  Future<void> _fetchHardwareInfo() async {
+    final deviceInfoPlugin = DeviceInfoPlugin();
+    String model = 'Unknown';
+    String osVersion = 'Unknown';
+    String architecture = 'Unknown';
+    String cores = Platform.numberOfProcessors.toString();
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfoPlugin.androidInfo;
+        model = '${androidInfo.manufacturer} ${androidInfo.model}';
+        osVersion = 'Android ${androidInfo.version.release}';
+        architecture = androidInfo.supportedAbis.isNotEmpty ? androidInfo.supportedAbis.join(', ') : 'Unknown';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfoPlugin.iosInfo;
+        model = iosInfo.name;
+        osVersion = '${iosInfo.systemName} ${iosInfo.systemVersion}';
+        architecture = iosInfo.utsname.machine;
+      }
+    } catch (e) {
+      print("Error fetching hardware info: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _model = model;
+        _osVersion = osVersion;
+        _architecture = architecture;
+        _cores = cores;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +62,7 @@ class HardwareScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hardware Specs'),
+        title: const Text('Device Specs'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {},
@@ -21,23 +72,23 @@ class HardwareScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildDeviceSummaryCard(context, cardColor, primaryColor),
+            _buildHeroSection(context, cardColor, primaryColor),
             const SizedBox(height: 24),
             _buildProcessorSection(context, cardColor, primaryColor),
             const SizedBox(height: 24),
             _buildDisplaySection(context, cardColor, primaryColor),
             const SizedBox(height: 24),
             _buildCameraSection(context, cardColor, primaryColor),
-            const SizedBox(height: 80), // bottom nav padding
+            const SizedBox(height: 80), // padding for bottom nav
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDeviceSummaryCard(BuildContext context, Color? cardColor, Color primaryColor) {
+  Widget _buildHeroSection(BuildContext context, Color? cardColor, Color primaryColor) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -63,7 +114,7 @@ class HardwareScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('iPhone 14 Pro', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text(_model, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -74,25 +125,10 @@ class HardwareScreen extends StatelessWidget {
                         border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text('A2890', style: TextStyle(color: primaryColor, fontSize: 12, fontWeight: FontWeight.w500)),
+                      child: Text(_osVersion, style: TextStyle(color: primaryColor, fontSize: 12, fontWeight: FontWeight.w500)),
                     ),
-                    const SizedBox(width: 8),
-                    Text('iOS 17.2', style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: 0.45,
-                  backgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                  borderRadius: BorderRadius.circular(4),
-                  minHeight: 6,
-                ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('Storage: 45% Used', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10)),
-                )
               ],
             ),
           )
@@ -121,11 +157,8 @@ class HardwareScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildSpecRow(context, 'SoC Name', 'Apple A16 Bionic', 'Cores', '6-core CPU'),
+              _buildSpecRow(context, 'Cores', '$_cores Cores', 'Architecture', _architecture),
               Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-              _buildSpecRow(context, 'Clock Speed', '3.46 GHz', 'Architecture', '64-bit ARM'),
-              Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-              _buildSpecRow(context, 'Process', '4nm', 'GPU', '5-core GPU'),
             ],
           ),
         )
@@ -179,10 +212,10 @@ class HardwareScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildListTile(context, 'Resolution', '2556 x 1179 px'),
-              _buildListTile(context, 'Pixel Density', '460 ppi'),
-              _buildListTile(context, 'Refresh Rate', '120 Hz ProMotion', isPrimary: true, primaryColor: primaryColor),
-              _buildListTile(context, 'Brightness (Peak)', '2000 nits', isLast: true),
+              _buildListTile(context, 'Resolution', 'N/A'),
+              _buildListTile(context, 'Pixel Density', 'N/A'),
+              _buildListTile(context, 'Refresh Rate', 'N/A', isPrimary: true, primaryColor: primaryColor),
+              _buildListTile(context, 'Brightness (Peak)', 'N/A', isLast: true),
             ],
           ),
         )
@@ -228,11 +261,7 @@ class HardwareScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        _buildCameraCard(context, cardColor, primaryColor, Icons.lens, 'Main', '48 MP, f/1.78', '24mm'),
-        const SizedBox(height: 12),
-        _buildCameraCard(context, cardColor, primaryColor, Icons.panorama, 'Ultra Wide', '12 MP, f/2.2', '13mm'),
-        const SizedBox(height: 12),
-        _buildCameraCard(context, cardColor, primaryColor, Icons.zoom_in, 'Telephoto', '12 MP, f/2.8', '77mm'),
+        _buildCameraCard(context, cardColor, primaryColor, Icons.lens, 'Main', 'N/A', 'N/A'),
       ],
     );
   }

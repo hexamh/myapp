@@ -1,8 +1,50 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:battery_plus/battery_plus.dart';
 
-class BatteryScreen extends StatelessWidget {
+class BatteryScreen extends StatefulWidget {
   const BatteryScreen({super.key});
+
+  @override
+  State<BatteryScreen> createState() => _BatteryScreenState();
+}
+
+class _BatteryScreenState extends State<BatteryScreen> {
+  final Battery _battery = Battery();
+  int _batteryLevel = 0;
+  BatteryState _batteryState = BatteryState.unknown;
+  StreamSubscription<BatteryState>? _batteryStateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBatteryInfo();
+    _batteryStateSubscription = _battery.onBatteryStateChanged.listen((BatteryState state) {
+      if (mounted) {
+        setState(() {
+          _batteryState = state;
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchBatteryInfo() async {
+    int batteryLevel = await _battery.batteryLevel;
+    BatteryState state = await _battery.batteryState;
+    if (mounted) {
+      setState(() {
+        _batteryLevel = batteryLevel;
+        _batteryState = state;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _batteryStateSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,33 +85,43 @@ class BatteryScreen extends StatelessWidget {
   }
 
   Widget _buildHeroBattery(BuildContext context, Color primaryColor) {
+    double percent = (_batteryLevel / 100).clamp(0.0, 1.0);
+    Color progressColor = _batteryLevel < 20 ? Colors.red : primaryColor;
+
+    IconData statusIcon = Icons.battery_full;
+    if (_batteryState == BatteryState.charging) {
+      statusIcon = Icons.battery_charging_full;
+    } else if (_batteryLevel < 20) {
+      statusIcon = Icons.battery_alert;
+    }
+
     return Column(
       children: [
         CircularPercentIndicator(
           radius: 96.0,
           lineWidth: 12.0,
-          percent: 0.84,
+          percent: percent,
           center: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.battery_charging_full, size: 32, color: primaryColor),
+              Icon(statusIcon, size: 32, color: progressColor),
               Text(
-                "84%",
+                "$_batteryLevel%",
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               Text(
-                "Discharging",
+                _batteryState.name.toUpperCase(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
               ),
             ],
           ),
-          progressColor: primaryColor,
+          progressColor: progressColor,
           backgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
           circularStrokeCap: CircularStrokeCap.round,
         ),
         const SizedBox(height: 16),
         Text(
-          'Approx. 5h 20m remaining based on current usage.',
+          'Approx. time remaining N/A',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
           textAlign: TextAlign.center,
         ),
@@ -99,7 +151,7 @@ class BatteryScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Good', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text('N/A', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -124,7 +176,7 @@ class BatteryScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('28.0 °C', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text('N/A', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -142,11 +194,11 @@ class BatteryScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildDetailRow(context, primaryColor, Icons.bolt, 'Status', 'Discharging'),
+          _buildDetailRow(context, primaryColor, Icons.bolt, 'Status', _batteryState.name),
           _buildDetailRow(context, primaryColor, Icons.power, 'Power Source', 'Battery'),
-          _buildDetailRow(context, primaryColor, Icons.memory, 'Technology', 'Li-Poly'),
-          _buildDetailRow(context, primaryColor, Icons.electric_bolt, 'Voltage', '3914 mV'),
-          _buildDetailRow(context, primaryColor, Icons.battery_full, 'Capacity', '3000 mAh', isLast: true),
+          _buildDetailRow(context, primaryColor, Icons.memory, 'Technology', 'N/A'),
+          _buildDetailRow(context, primaryColor, Icons.electric_bolt, 'Voltage', 'N/A'),
+          _buildDetailRow(context, primaryColor, Icons.battery_full, 'Capacity', 'N/A', isLast: true),
         ],
       ),
     );

@@ -1,7 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 
-class NetworkScreen extends StatelessWidget {
+class NetworkScreen extends StatefulWidget {
   const NetworkScreen({super.key});
+
+  @override
+  State<NetworkScreen> createState() => _NetworkScreenState();
+}
+
+class _NetworkScreenState extends State<NetworkScreen> {
+  final NetworkInfo _networkInfo = NetworkInfo();
+  String _wifiName = 'Loading...';
+  String _wifiBSSID = 'Loading...';
+  String _wifiIP = 'Loading...';
+  String _wifiIPv6 = 'Loading...';
+  String _wifiSubmask = 'Loading...';
+  String _wifiBroadcast = 'Loading...';
+  String _wifiGateway = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNetworkInfo();
+  }
+
+  Future<void> _fetchNetworkInfo() async {
+    String? wifiName;
+    String? wifiBSSID;
+    String? wifiIP;
+    String? wifiIPv6;
+    String? wifiSubmask;
+    String? wifiBroadcast;
+    String? wifiGateway;
+
+    try {
+      wifiName = await _networkInfo.getWifiName();
+      wifiBSSID = await _networkInfo.getWifiBSSID();
+      wifiIP = await _networkInfo.getWifiIP();
+      wifiIPv6 = await _networkInfo.getWifiIPv6();
+      wifiSubmask = await _networkInfo.getWifiSubmask();
+      wifiBroadcast = await _networkInfo.getWifiBroadcast();
+      wifiGateway = await _networkInfo.getWifiGatewayIP();
+    } catch (e) {
+      debugPrint("Failed to get network info: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _wifiName = wifiName ?? 'Not Connected';
+        _wifiBSSID = wifiBSSID ?? 'N/A';
+        _wifiIP = wifiIP ?? 'N/A';
+        _wifiIPv6 = wifiIPv6 ?? 'N/A';
+        _wifiSubmask = wifiSubmask ?? 'N/A';
+        _wifiBroadcast = wifiBroadcast ?? 'N/A';
+        _wifiGateway = wifiGateway ?? 'N/A';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +89,8 @@ class NetworkScreen extends StatelessWidget {
   }
 
   Widget _buildWifiSection(BuildContext context, Color? cardColor, Color primaryColor) {
+    bool isConnected = _wifiName != 'Not Connected' && _wifiName != 'Loading...';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -44,19 +101,19 @@ class NetworkScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: isConnected ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                border: Border.all(color: isConnected ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: isConnected ? Colors.green : Colors.red, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 6),
-                  const Text('CONNECTED', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text(isConnected ? 'CONNECTED' : 'DISCONNECTED', style: TextStyle(color: isConnected ? Colors.green : Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -71,11 +128,13 @@ class NetworkScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildNetworkRow(context, Icons.wifi, Colors.blue, 'SSID', 'MyHome_5G'),
-              _buildNetworkRow(context, Icons.router, Colors.purple, 'BSSID', '00:11:22:33:44:55', isMono: true),
-              _buildNetworkRow(context, Icons.dns, Colors.cyan, 'IP Address', '192.168.1.105', isMono: true),
-              _buildNetworkRow(context, Icons.alt_route, Colors.orange, 'Gateway', '192.168.1.1', isMono: true),
-              _buildNetworkRow(context, Icons.signal_cellular_alt, Colors.green, 'Signal Strength', '-45 dBm\nExcellent', isLast: true),
+              _buildNetworkRow(context, Icons.wifi, Colors.blue, 'SSID', _wifiName),
+              _buildNetworkRow(context, Icons.router, Colors.purple, 'BSSID', _wifiBSSID, isMono: true),
+              _buildNetworkRow(context, Icons.dns, Colors.cyan, 'IP Address', _wifiIP, isMono: true),
+              _buildNetworkRow(context, Icons.dns, Colors.cyan, 'IPv6 Address', _wifiIPv6, isMono: true),
+              _buildNetworkRow(context, Icons.settings_ethernet, Colors.teal, 'Submask', _wifiSubmask, isMono: true),
+              _buildNetworkRow(context, Icons.cell_tower, Colors.indigo, 'Broadcast', _wifiBroadcast, isMono: true),
+              _buildNetworkRow(context, Icons.alt_route, Colors.orange, 'Gateway', _wifiGateway, isMono: true, isLast: true),
             ],
           ),
         ),
@@ -106,14 +165,16 @@ class NetworkScreen extends StatelessWidget {
               Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
             ],
           ),
-          Text(
-            value,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              fontFamily: isMono ? 'monospace' : null,
-              color: value.contains('Excellent') ? Colors.green : null,
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontFamily: isMono ? 'monospace' : null,
+              ),
             ),
           ),
         ],
@@ -159,7 +220,7 @@ class NetworkScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Operator', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12)),
-                        Text('Verizon', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Text('N/A', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],
@@ -188,7 +249,7 @@ class NetworkScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Type', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12, color: Colors.white70)),
-                        Text('5G / NR', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text('N/A', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                   ],
@@ -196,21 +257,6 @@ class NetworkScreen extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            children: [
-              _buildNetworkRow(context, Icons.sim_card, Colors.pink, 'SIM State', 'Ready'),
-              _buildNetworkRow(context, Icons.public, Colors.amber, 'Roaming', 'Off'),
-              _buildNetworkRow(context, Icons.swap_vert, Colors.blue, 'Mobile Data', 'Connected', isLast: true),
-            ],
-          ),
         ),
       ],
     );
