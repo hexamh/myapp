@@ -20,8 +20,7 @@ class AppTheme {
   static const Color borderLight = Color(0xFFE2E8F0);
   static const Color borderDark = Color(0xFF1E293B);
 
-  static ThemeData get lightTheme {
-    return ThemeData(
+  static final ThemeData lightTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: primaryColor,
@@ -69,10 +68,8 @@ class AppTheme {
         elevation: 8,
       ),
     );
-  }
 
-  static ThemeData get darkTheme {
-    return ThemeData(
+  static final ThemeData darkTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: primaryColor,
@@ -120,5 +117,4 @@ class AppTheme {
         elevation: 8,
       ),
     );
-  }
 }
