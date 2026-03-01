@@ -7,7 +7,9 @@ import 'network_screen.dart';
 import 'battery_screen.dart';
 
 class MainLayout extends StatefulWidget {
-  const MainLayout({super.key});
+  final List<Widget>? screens; // Allow injecting mock screens for testing
+
+  const MainLayout({super.key, this.screens});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -16,13 +18,19 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    HardwareScreen(),
-    SystemScreen(),
-    BatteryScreen(),
-    NetworkScreen(), // We'll put Network here based on the icons design
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = widget.screens ?? const [
+      DashboardScreen(),
+      HardwareScreen(),
+      SystemScreen(),
+      BatteryScreen(),
+      NetworkScreen(), // We'll put Network here based on the icons design
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
