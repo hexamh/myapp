@@ -39,7 +39,7 @@ dependencies:
   network_info_plus: ^7.0.0
   package_info_plus: ^9.0.0
   system_info2: ^4.1.0
-  percent_indicator: ^4.2.5
+  percent_indicator: ^4.2.5 # Added for dashboard indicators
   google_fonts: ^8.0.2
 
 dev_dependencies:
