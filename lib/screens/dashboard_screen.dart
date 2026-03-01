@@ -197,7 +197,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text('Battery', style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
           Text('$_batteryLevel%', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const Spacer(),
+          const SizedBox(height: 16),
           LinearPercentIndicator(
             lineHeight: 8.0,
             percent: percent,
